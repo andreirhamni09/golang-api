@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"api-mux/connections"
 	"api-mux/structs"
 	"encoding/json"
 	"io/ioutil"
@@ -8,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
 )
 
 func CreateProduct(w http.ResponseWriter, r *http.Request) {
@@ -16,24 +16,18 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 
 	var dbProducts structs.Products
 
-	DB, _ := gorm.Open("mysql", "root:@/db_nasabah?charset=utf8&parseTime=True&loc=Local")
-
 	json.Unmarshal(payloads, &dbProducts)
-	DB.Create(&dbProducts)
+
+	if err := connections.DB.Create(&dbProducts).Error; err != nil {
+		ReturnCheckError(w, err)
+	}
 
 	res := structs.Result{Code: 200, Data: dbProducts, Message: "Berhasil Menambahkan Product Baru"}
 
 	result, err := json.Marshal(res)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
+	ReturnCheckError(w, err)
+	ReturnResult(w, result)
 }
-
 func GetProductsLimit(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 
@@ -49,20 +43,15 @@ func GetProductsLimit(w http.ResponseWriter, r *http.Request) {
 
 	dbProducts := []structs.Products{}
 
-	DB, _ := gorm.Open("mysql", "root:@/db_nasabah?charset=utf8&parseTime=True&loc=Local")
-
-	DB.Limit(limit).Offset(offset).Find(&dbProducts)
-
-	res := structs.Result{Code: 200, Data: dbProducts, Message: "User has successfully retrieve"}
-	resuts, err := json.Marshal(res)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := connections.DB.Limit(limit).Offset(offset).Find(&dbProducts).Error; err != nil {
+		ReturnCheckError(w, err)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(resuts)
+	res := structs.Result{Code: 200, Data: dbProducts, Message: "Products has successfully retrieve"}
+	resuts, err := json.Marshal(res)
+
+	ReturnCheckError(w, err)
+	ReturnResult(w, resuts)
 }
 
 func GetProductId(w http.ResponseWriter, r *http.Request) {
@@ -70,20 +59,17 @@ func GetProductId(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 
 	dbProducts := structs.Products{}
-	DB, _ := gorm.Open("mysql", "root:@/db_nasabah?charset=utf8&parseTime=True&loc=Local")
 
-	DB.First(&dbProducts, id)
+	if err := connections.DB.First(&dbProducts, id).Error; err != nil {
+		ReturnCheckError(w, err)
+	}
 
 	res := structs.Result{Code: 200, Data: dbProducts, Message: "Product Ditemukan"}
 
 	result, err := json.Marshal(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
+	ReturnCheckError(w, err)
+	ReturnResult(w, result)
 }
 
 func UpdateProductById(w http.ResponseWriter, r *http.Request) {
@@ -92,24 +78,20 @@ func UpdateProductById(w http.ResponseWriter, r *http.Request) {
 	payloads, _ := ioutil.ReadAll(r.Body)
 
 	var dbProducts structs.Products
-	DB, _ := gorm.Open("mysql", "root:@/db_nasabah?charset=utf8&parseTime=True&loc=Local")
 
-	DB.First(&dbProducts, id)
+	connections.DB.First(&dbProducts, id)
 
 	json.Unmarshal(payloads, &dbProducts)
 
-	DB.Model(&dbProducts).Update(dbProducts)
+	if err := connections.DB.Model(&dbProducts).Update(dbProducts).Error; err != nil {
+		ReturnCheckError(w, err)
+	}
 
 	res := structs.Result{Code: 200, Data: dbProducts, Message: "Berhasil Update Data Product"}
 
 	result, err := json.Marshal(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
+	ReturnCheckError(w, err)
+	ReturnResult(w, result)
 }
 
 func DeleteProductById(w http.ResponseWriter, r *http.Request) {
@@ -118,19 +100,17 @@ func DeleteProductById(w http.ResponseWriter, r *http.Request) {
 
 	var dbProducts structs.Products
 
-	DB, _ := gorm.Open("mysql", "root:@/db_nasabah?charset=utf8&parseTime=True&loc=Local")
-
-	DB.First(&dbProducts, id)
-	DB.Delete(&dbProducts)
+	if err := connections.DB.First(&dbProducts, id).Error; err != nil {
+		ReturnCheckError(w, err)
+	}
+	if err := connections.DB.Delete(&dbProducts).Error; err != nil {
+		ReturnCheckError(w, err)
+	}
 
 	res := structs.Result{Code: 200, Data: dbProducts, Message: "Berhasil Menghapus Product"}
 
 	result, err := json.Marshal(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
+	ReturnCheckError(w, err)
+	ReturnResult(w, result)
 }
